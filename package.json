@@ -1,0 +1,22 @@
+{
+  "name": "tc-dal",
+  "version": "1.0.0",
+  "description": "Topcoder Data Access Layer",
+  "main": "index.js",
+  "scripts": {
+    "lint": "standard",
+    "lint:fix": "standard --fix"
+  },
+  "keywords": [],
+  "author": "",
+  "dependencies": {
+    "dynamoose": "^1.11.1",
+    "lodash": "^4.17.21"
+  },
+  "engines": {
+    "node": ">=16"
+  },
+  "devDependencies": {
+    "standard": "^17.0.0"
+  }
+}
