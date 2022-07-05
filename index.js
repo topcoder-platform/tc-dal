@@ -1,4 +1,3 @@
-const { DynamoDbService } = require('./services/DynamoDbService')
 const { DATABASE_TYPES } = require('./utils/constants')
 
 /**
@@ -13,7 +12,7 @@ const { DATABASE_TYPES } = require('./utils/constants')
 function getDatabaseService (databaseType, config) {
   switch (databaseType) {
     case DATABASE_TYPES.DYNAMO_DB: {
-      return new DynamoDbService(config)
+      return require('./services/DynamoDbService')(config)
     }
     case DATABASE_TYPES.POSTGESQL:
       console.log('Postgres not supported yet by the library')

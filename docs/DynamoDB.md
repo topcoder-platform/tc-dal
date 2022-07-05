@@ -20,9 +20,7 @@ The switch to Dynamoose v2 have some breaking changes which may break running ap
 ## Configuration:
 The following confguration parameters need to be provided to get the DynamoDB service instance:
 ```javascript
-const { getDatabaseService } = require('tc-dal')
-
-databaseService = getDatabaseService('DynamoDb', configObject)
+databaseService = require('tc-dal').getDatabaseService('DynamoDb', databaseServiceConfig)
 ```
 
 The format of the configObject is:

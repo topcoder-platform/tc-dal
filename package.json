@@ -10,8 +10,10 @@
   "keywords": [],
   "author": "",
   "dependencies": {
+    "config": "^3.3.7",
     "dynamoose": "^1.11.1",
-    "lodash": "^4.17.21"
+    "lodash": "^4.17.21",
+    "tc-framework": "file:../tc-framework"
   },
   "engines": {
     "node": ">=16"
