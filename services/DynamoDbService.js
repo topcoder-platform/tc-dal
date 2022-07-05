@@ -1,20 +1,16 @@
 const errors = require('../utils/errors')
 const _ = require('lodash')
 const dynamoose = require('dynamoose')
+const config = require('config')
 const Schema = dynamoose.Schema
 
+// This should be updates when the logger is fully tested
+const logger = require('tc-framework/src/lib/logger')({})
+
 /**
- * This class provides functions to use to interact with DynamoDB database
- */
-class DynamoDbService {
-  /**
-   * Creates a new instance of the DynamoDbService with the provided configuration
-   * The models are generated on the fly from the specified entities
-   *
-   * @param {Object} config The configuration object of the DynamoDB service instance
-   *
-   * The format of the config object is the following
-   {
+ * This module exports a function to use for creating the DynamoDbService with the given configuration.
+ * The configuration of the service should have the following format
+ * {
    "awsConfig": {
       "accessKeyId":"awsAccessKeyId",
       "secretAccessKey":"awsSecretAccessKey",
@@ -38,22 +34,28 @@ class DynamoDbService {
       }
     }
   }
-  */
-  constructor (config) {
-    // Update the dynamoose AWS global configuration
-    dynamoose.AWS.config.update(config.awsConfig)
+ * @param {Object} databaseServiceConfig The configuration object to use for initializing the DynampDB Service
+ * @returns The initialized DynamoDB service
+ */
+module.exports = (databaseServiceConfig) => {
+  // The dynamoDB service instance
+  const dynamoDbService = {}
 
-    if (config.isLocalDB) {
-      dynamoose.local(config.localDatabaseURL)
-    }
+  // The models object to be managed by the DynamoDB service
+  const models = {}
 
-    dynamoose.setDefaults(config.dynamooseDefaults)
+  // Update the dynamoose AWS global configuration
+  dynamoose.AWS.config.update(databaseServiceConfig.awsConfig)
 
-    this.models = {}
-    _.forEach(_.keys(config.entities), async (key) => {
-      this.models[key] = await getDynamooseModel(key, config.entities[key])
-    })
+  if (databaseServiceConfig.isLocalDB) {
+    dynamoose.local(databaseServiceConfig.localDatabaseURL)
   }
+
+  dynamoose.setDefaults(databaseServiceConfig.dynamooseDefaults)
+
+  _.forEach(_.keys(databaseServiceConfig.entities), async (key) => {
+    models[key] = await getDynamooseModel(key, databaseServiceConfig.entities[key])
+  })
 
   /**
    * Performs a search in the specified table by the provided search options
@@ -63,9 +65,9 @@ class DynamoDbService {
    *                               The key is the field name and the value is the parameter value to search by
    * @returns Promise([]) of an array containing the records that match the search parameters
    */
-  search (tableName, searchOptions) {
+  dynamoDbService.search = (tableName, searchOptions) => {
     return new Promise((resolve, reject) => {
-      this.models[tableName].scan(searchOptions).exec((err, result) => {
+      models[tableName].scan(searchOptions).exec((err, result) => {
         if (err) {
           reject(err)
         } else {
@@ -75,6 +77,9 @@ class DynamoDbService {
     })
   }
 
+  // enable apm instrumentation for the search function
+  dynamoDbService.search.apm = true
+
   /**
    * Gets a document by id
    *
@@ -83,9 +88,9 @@ class DynamoDbService {
    * @throws NotFoundError if the record with the given id does not exist in the database
    * @returns Promise of the found record
    */
-  getById (tableName, id) {
+  dynamoDbService.getById = (tableName, id) => {
     return new Promise((resolve, reject) => {
-      this.models[tableName]
+      models[tableName]
         .query('id')
         .eq(id)
         .exec((err, result) => {
@@ -104,13 +109,16 @@ class DynamoDbService {
     })
   }
 
+  // enable apm instrumentation for getById function
+  dynamoDbService.getById.apm = true
+
   /**
    * Check if the records matched by the given parameters already exist
    * @param {Object} tableName The table name in which to check for duplicate records
    * @param {String} keys The attributes names of table to check
    * @param {String} values The attributes values to be validated
    */
-  async validateDuplicate (tableName, keys, values) {
+  dynamoDbService.validateDuplicate = async (tableName, keys, values) => {
     const options = {}
     if (Array.isArray(keys)) {
       if (keys.length !== values.length) {
@@ -126,7 +134,7 @@ class DynamoDbService {
       options[keys] = { eq: values }
     }
 
-    const records = await this.search(tableName, options)
+    const records = await dynamoDbService.search(tableName, options)
     if (records.length > 0) {
       if (Array.isArray(keys)) {
         let str = `${tableName} with [ `
@@ -150,6 +158,9 @@ class DynamoDbService {
     }
   }
 
+  // enable apm instrumentation for validateDuplicate
+  dynamoDbService.validateDuplicate.apm = true
+
   /**
    * Create item in the specified table with the given data values
    *
@@ -157,9 +168,9 @@ class DynamoDbService {
    * @param {Object} data The data of the object to create
    * @returns created record
    */
-  create (tableName, data) {
+  dynamoDbService.create = (tableName, data) => {
     return new Promise((resolve, reject) => {
-      const dbItem = new this.models[tableName](data)
+      const dbItem = new models[tableName](data)
       dbItem.save((err) => {
         if (err) {
           reject(err)
@@ -170,13 +181,16 @@ class DynamoDbService {
     })
   }
 
+  // enable apm instrumentation for create function
+  dynamoDbService.create.apm = true
+
   /**
    * Update item in database
    * @param {Object} dbItem The Dynamo database item
    * @param {Object} data The updated data object
    * @returns updated entity
    */
-  update (dbItem, data) {
+  dynamoDbService.update = (dbItem, data) => {
     Object.keys(data).forEach((key) => {
       dbItem[key] = data[key]
     })
@@ -191,11 +205,14 @@ class DynamoDbService {
     })
   }
 
+  // enable apm instrumentation for the update function
+  dynamoDbService.update.apm = true
+
   /**
-   * Delete item in database
+   * Delete an item in database
    * @param {Object} dbItem The Dynamo database item to remove
    */
-  delete (dbItem) {
+  dynamoDbService.remove = (dbItem) => {
     return new Promise((resolve, reject) => {
       dbItem.delete((err) => {
         if (err) {
@@ -206,6 +223,13 @@ class DynamoDbService {
       })
     })
   }
+
+  // enable the apm instrumentation for the remove function
+  dynamoDbService.remove.apm = true
+
+  logger.buildService(dynamoDbService, config.Service_NAME, config.SERVICE_VERSION)
+
+  return dynamoDbService
 }
 
 /**
@@ -282,8 +306,4 @@ const getDynamooseModel = (modelName, entity) => {
   )
 
   return dynamoose.model(modelName, schema)
-}
-
-module.exports = {
-  DynamoDbService
 }
